@@ -39,13 +39,27 @@ module Rdio
           'method' => HISTORY_METHOD
         }
         output = []
-        history = do_post(HISTORY_PATH, params)
+        
+        attempts = 1
+        while output.length == 0 do
+          history = do_post(HISTORY_PATH, params)
+          
+          if history.size > 0
+            history['result']['sources'].each_with_index do |source, i|
+              source['tracks'].each do |item|
+                output << Item.new(item, source['extraTrackKeys'])
+              end
+            end
+          end
 
-        if history.size > 0
-          @cursor = history['result']['last_transaction']
-          history['result']['sources'].each_with_index do |source, i|
-            source['tracks'].each do |item|
-              output << Item.new(item)
+          if output.length == 0 then
+            puts "Oops...no data even though last result said we are not done....trying again. attempt #{attempts}. cursor is at #{@cursor}"
+            attempts += 1
+            sleep(1)
+          else
+            @cursor = history['result']['last_transaction']
+            if history['result']['doneLoading'] then
+              return nil
             end
           end
         end

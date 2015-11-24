@@ -1,8 +1,9 @@
 require 'rake'
 require 'highline/import'
 require 'colorize'
-require 'lib/rdio-history'
+require './lib/rdio-history'
 require 'rspec/core/rake_task'
+require 'json'
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -14,9 +15,20 @@ end
 desc "Auth then retreive the most recent songs"
 task :default => [:get_user] do
   f = Rdio::History::Fetcher.new(@username)
+  
+  history = []
+  $i = 0
+  while slice = f.fetch do
+    $i += 1
+    puts $i
+    
+    File.open("data_" + $i.to_s + ".json","w+") do |f|
+      f.write(slice.to_json)
+    end
 
-  f.fetch.each do |song|
-    puts "#{song.name} - #{song.artist}"
+    slice.each do |song|
+      puts "#{song.track_name} - #{song.artist_name} # #{song.time} ## => #{song.count}"
+    end
   end
 end
 
